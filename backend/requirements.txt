@@ -1,8 +1,8 @@
 # SAM-Audio Pipeline Dependencies
 
 # Core ML
-torch>=2.4.0
-torchaudio>=2.4.0
+torch>=2.5.1
+torchaudio>=2.5.1
 
 # SAM-Audio model (from GitHub)
 sam-audio @ git+https://github.com/facebookresearch/sam-audio.git

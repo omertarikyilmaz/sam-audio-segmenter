@@ -1,5 +1,5 @@
 # SAM-Audio Pipeline - CUDA-enabled Docker Image (DGX/Devel Optimized)
-FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y \
-    python3.11 \
-    python3.11-venv \
-    python3.11-dev \
+    python3.12 \
+    python3.12-venv \
+    python3.12-dev \
     python3-pip \
     build-essential \
     cmake \
@@ -32,9 +32,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python 3.11 as default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+# Set Python 3.12 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
     && python3 -m pip install --upgrade pip setuptools wheel
 
 # Create working directory
@@ -44,11 +44,11 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.1 index
-# We use >=2.4.0 to ensure torchcodec compatibility
+# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.6 index
+# Aligned for modern DGX servers (CUDA 12.8/13.0)
 RUN python3 -m pip install --no-cache-dir \
-    torch>=2.4.0 torchaudio>=2.4.0 torchcodec \
-    --extra-index-url https://download.pytorch.org/whl/cu121
+    torch>=2.5.1 torchaudio>=2.5.1 torchcodec \
+    --extra-index-url https://download.pytorch.org/whl/cu126
 
 # 2. Build decord from source (Git)
 # We must build the C++ library first, then install the Python wrapper
