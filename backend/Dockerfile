@@ -8,15 +8,22 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y \
-    python3.10 \
-    python3.10-venv \
-    python3.10-dev \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
     python3-pip \
     build-essential \
     cmake \
     g++ \
+    ninja-build \
     ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libavdevice-dev \
     libsndfile1 \
     libgl1-mesa-glx \
     libglib2.0-0 \
@@ -24,9 +31,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python 3.10 as default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && python3 -m pip install --upgrade pip setuptools wheel
 
 # Create working directory
@@ -36,10 +43,12 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-# First install torch and torchaudio with explicit CUDA 12.1 index
+# 1. Install torch and torchaudio with explicit CUDA 12.1 index
+# 2. Pre-install eva-decord as a drop-in replacement for decord (required for Python 3.11 compatibility)
 RUN python3 -m pip install --no-cache-dir \
     torch>=2.0.0 torchaudio>=2.0.0 \
     --extra-index-url https://download.pytorch.org/whl/cu121 \
+    && python3 -m pip install --no-cache-dir eva-decord \
     && python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
