@@ -45,13 +45,23 @@ COPY requirements.txt .
 
 # Install Python dependencies
 # 1. Install torch and torchaudio with explicit CUDA 12.1 index
-# 2. Install decord from source (git) to ensure Python 3.11 compatibility on DGX
-# 3. Install the rest of the requirements
 RUN python3 -m pip install --no-cache-dir \
     torch>=2.0.0 torchaudio>=2.0.0 \
-    --extra-index-url https://download.pytorch.org/whl/cu121 \
-    && python3 -m pip install --no-cache-dir "git+https://github.com/dmlc/decord.git" \
-    && python3 -m pip install --no-cache-dir -r requirements.txt
+    --extra-index-url https://download.pytorch.org/whl/cu121
+
+# 2. Build decord from source (Git)
+# We must build the C++ library first, then install the Python wrapper
+RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
+    && cd /tmp/decord \
+    && mkdir build && cd build \
+    && cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc) \
+    && cd ../python \
+    && python3 setup.py install \
+    && rm -rf /tmp/decord
+
+# 3. Install the rest of the requirements
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
