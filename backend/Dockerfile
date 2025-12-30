@@ -1,5 +1,7 @@
 # SAM-Audio Pipeline - Official NVIDIA DGX Image (ARM/aarch64 Optimized)
-FROM nvcr.io/nvidia/pytorch:24.12-py3
+# Using 24.08-py3 (PyTorch 2.5) for torchcodec compatibility
+# Note: 24.12-py3 has PyTorch 2.6.0a0 (alpha) which has C++ template incompatibilities with torchcodec
+FROM nvcr.io/nvidia/pytorch:24.08-py3
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -29,18 +31,16 @@ COPY requirements.txt .
 # 1. Upgrade pip and setuptools for torchcodec compatibility
 RUN python3 -m pip install --upgrade pip setuptools wheel pybind11
 
-# 2. Build torchcodec v0.2.1 from source (compatible with PyTorch 2.6)
-# The C++ extensions need cmake to build properly on aarch64
+# 2. Build torchcodec v0.1.0 from source (compatible with PyTorch 2.5)
 # I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION is required when building against system FFmpeg
-ENV CMAKE_PREFIX_PATH="$(python3 -c 'import torch;print(torch.utils.cmake_prefix_path)')"
 ENV I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION=1
-RUN git clone --branch v0.2.1 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+RUN git clone --branch v0.1.0 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
     && python3 -m pip install --no-build-isolation . \
     && rm -rf /tmp/torchcodec
 
 # 3. Final verification of dependencies
-RUN python3 -c "import torch; import torchcodec; print('torchcodec version:', torchcodec.__version__); print('Verified: torchcodec installed')"
+RUN python3 -c "import torch; import torchcodec; print('PyTorch:', torch.__version__); print('torchcodec:', torchcodec.__version__)"
 
 # 4. Install the rest of the requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
