@@ -29,12 +29,12 @@ COPY requirements.txt .
 # 1. Upgrade pip and setuptools for torchcodec compatibility
 RUN python3 -m pip install --upgrade pip setuptools wheel pybind11
 
-# 2. Build torchcodec from source with cmake for ARM
+# 2. Build torchcodec v0.2.1 from source (compatible with PyTorch 2.6)
 # The C++ extensions need cmake to build properly on aarch64
 ENV CMAKE_PREFIX_PATH="$(python3 -c 'import torch;print(torch.utils.cmake_prefix_path)')"
-RUN git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+RUN git clone --branch v0.2.1 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
-    && python3 -m pip install --no-build-isolation -e . \
+    && python3 -m pip install --no-build-isolation . \
     && rm -rf /tmp/torchcodec
 
 # 3. Final verification of dependencies
