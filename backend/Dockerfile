@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     python3.11-venv \
     python3.11-dev \
     python3-pip \
+    build-essential \
+    cmake \
+    g++ \
     ffmpeg \
     libsndfile1 \
     git \
@@ -23,7 +26,7 @@ RUN apt-get update && apt-get install -y \
 # Set Python 3.11 as default
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-    && python -m pip install --upgrade pip
+    && python3 -m pip install --upgrade pip setuptools wheel
 
 # Create working directory
 WORKDIR /app
@@ -32,8 +35,11 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# First install torch and torchaudio with explicit CUDA 12.1 index
+RUN python3 -m pip install --no-cache-dir \
+    torch>=2.0.0 torchaudio>=2.0.0 \
+    --extra-index-url https://download.pytorch.org/whl/cu121 \
+    && python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
