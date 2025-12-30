@@ -28,9 +28,10 @@ COPY requirements.txt .
 
 # 1. Build torchcodec from source (Git)
 # Fixes "No module named torchcodec.decoders" by ensuring matching binaries for ARM
+# Use --no-build-isolation to use NGC's pre-installed PyTorch
 RUN git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
-    && python3 -m pip install . \
+    && python3 -m pip install --no-build-isolation . \
     && rm -rf /tmp/torchcodec
 
 # 2. Final verification of dependencies
