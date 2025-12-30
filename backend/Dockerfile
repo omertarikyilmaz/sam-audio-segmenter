@@ -1,24 +1,15 @@
-# SAM-Audio Pipeline - CUDA-enabled Docker Image (DGX/Devel Optimized)
-FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
+# SAM-Audio Pipeline - Official NVIDIA DGX Image (ARM/aarch64 Optimized)
+FROM nvcr.io/nvidia/pytorch:24.12-py3
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DECORD_GPU=0
 
-# Install system dependencies
+# Install additional system dependencies
+# Note: Basic build tools, ffmpeg, and python are already in the NVIDIA image
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y \
-    python3.12 \
-    python3.12-venv \
-    python3.12-dev \
-    build-essential \
-    cmake \
-    g++ \
     ninja-build \
-    ffmpeg \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
@@ -27,16 +18,7 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    git \
-    curl \
     && rm -rf /var/lib/apt/lists/*
-
-# Set Python 3.12 as default and install pip properly for 3.12
-# We use get-pip.py because the system python3-pip depends on 'distutils' which was removed in 3.12
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
-    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12 \
-    && python3 -m pip install --upgrade pip setuptools wheel
 
 # Create working directory
 WORKDIR /app
@@ -44,15 +26,8 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 
-# Install Python dependencies
-# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.4 index
-# We use 2.5.1 + torchcodec 0.1.0 which is the most stable pairing for DGX
-RUN python3 -m pip install --no-cache-dir \
-    torch==2.5.1 torchaudio==2.5.1 torchcodec==0.1.0 \
-    --extra-index-url https://download.pytorch.org/whl/cu124 \
-    && python3 -c "import torchcodec.decoders; print('Verified: torchcodec.decoders is correctly installed')"
-
-# 2. Build decord from source (Git)
+# 1. Build decord from source (Git)
+# Necessary for Python 3.12 + DGX architecture compatibility
 RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
     && cd /tmp/decord \
     && mkdir build && cd build \
@@ -62,7 +37,17 @@ RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
     && python3 setup.py install \
     && rm -rf /tmp/decord
 
-# 3. Install the rest of the requirements
+# 2. Build torchcodec from source (Git)
+# Fixes "No module named torchcodec.decoders" by ensuring matching binaries for ARM
+RUN git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+    && cd /tmp/torchcodec \
+    && python3 -m pip install . \
+    && rm -rf /tmp/torchcodec
+
+# 3. Final verification of dependencies
+RUN python3 -c "import torch; import torchcodec.decoders; import decord; print('Verified: All DGX dependencies are correctly installed')"
+
+# 4. Install the rest of the requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

@@ -1,9 +1,7 @@
 # SAM-Audio Pipeline Dependencies
 
-# Core ML
-torch==2.5.1
-torchaudio==2.5.1
-torchcodec==0.1.0
+# Core ML (Handled by NVIDIA Base Image)
+# torch, torchaudio, torchcodec are pre-installed or built from source
 
 # SAM-Audio model (from GitHub)
 sam-audio @ git+https://github.com/facebookresearch/sam-audio.git
