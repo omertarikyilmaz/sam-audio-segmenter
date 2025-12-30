@@ -26,13 +26,16 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 
-# 1. Build torchcodec from source (Git)
-# Fixes "No module named torchcodec.decoders" by ensuring matching binaries for ARM
-# Use --no-build-isolation to use NGC's pre-installed PyTorch
-RUN git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+# 1. Upgrade pip and setuptools for torchcodec compatibility
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# 2. Install torchcodec - try pip first, then source build if needed
+# The NGC image may have compatible wheels via conda-forge mirror
+RUN python3 -m pip install torchcodec || \
+    (git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
     && python3 -m pip install --no-build-isolation . \
-    && rm -rf /tmp/torchcodec
+    && rm -rf /tmp/torchcodec)
 
 # 2. Final verification of dependencies
 RUN python3 -c "import torch; import torchcodec.decoders; print('Verified: All DGX dependencies are correctly installed')"
