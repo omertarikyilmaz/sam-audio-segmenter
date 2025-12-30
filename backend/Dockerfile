@@ -61,7 +61,9 @@ RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
     && rm -rf /tmp/decord
 
 # 3. Install the rest of the requirements
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+# Pre-install torchcodec which is used by sam-audio for decoding
+RUN python3 -m pip install --no-cache-dir torchcodec \
+    && python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
