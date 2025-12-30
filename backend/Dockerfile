@@ -45,11 +45,12 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.6 index
-# Aligned for modern DGX servers (CUDA 12.8/13.0)
+# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.4 index
+# We use 2.5.1 + torchcodec 0.1.0 which is the most stable pairing for DGX
 RUN python3 -m pip install --no-cache-dir \
-    torch>=2.5.1 torchaudio>=2.5.1 torchcodec \
-    --extra-index-url https://download.pytorch.org/whl/cu126
+    torch==2.5.1 torchaudio==2.5.1 torchcodec==0.1.0 \
+    --extra-index-url https://download.pytorch.org/whl/cu124 \
+    && python3 -c "import torchcodec.decoders; print('Verified: torchcodec.decoders is correctly installed')"
 
 # 2. Build decord from source (Git)
 RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
