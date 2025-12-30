@@ -31,7 +31,9 @@ RUN python3 -m pip install --upgrade pip setuptools wheel pybind11
 
 # 2. Build torchcodec v0.2.1 from source (compatible with PyTorch 2.6)
 # The C++ extensions need cmake to build properly on aarch64
+# I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION is required when building against system FFmpeg
 ENV CMAKE_PREFIX_PATH="$(python3 -c 'import torch;print(torch.utils.cmake_prefix_path)')"
+ENV I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION=1
 RUN git clone --branch v0.2.1 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
     && python3 -m pip install --no-build-isolation . \
