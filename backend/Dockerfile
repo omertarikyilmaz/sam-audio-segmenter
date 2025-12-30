@@ -1,9 +1,10 @@
-# SAM-Audio Pipeline - CUDA-enabled Docker Image
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+# SAM-Audio Pipeline - CUDA-enabled Docker Image (DGX/Devel Optimized)
+FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV DECORD_GPU=0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -44,11 +45,12 @@ COPY requirements.txt .
 
 # Install Python dependencies
 # 1. Install torch and torchaudio with explicit CUDA 12.1 index
-# 2. Pre-install eva-decord as a drop-in replacement for decord (required for Python 3.11 compatibility)
+# 2. Install decord from source (git) to ensure Python 3.11 compatibility on DGX
+# 3. Install the rest of the requirements
 RUN python3 -m pip install --no-cache-dir \
     torch>=2.0.0 torchaudio>=2.0.0 \
     --extra-index-url https://download.pytorch.org/whl/cu121 \
-    && python3 -m pip install --no-cache-dir eva-decord \
+    && python3 -m pip install --no-cache-dir "git+https://github.com/dmlc/decord.git" \
     && python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
