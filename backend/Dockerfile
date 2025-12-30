@@ -44,9 +44,10 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-# 1. Install torch and torchaudio with explicit CUDA 12.1 index
+# 1. Install torch, torchaudio, and torchcodec with explicit CUDA 12.1 index
+# We use >=2.4.0 to ensure torchcodec compatibility
 RUN python3 -m pip install --no-cache-dir \
-    torch>=2.0.0 torchaudio>=2.0.0 \
+    torch>=2.4.0 torchaudio>=2.4.0 torchcodec \
     --extra-index-url https://download.pytorch.org/whl/cu121
 
 # 2. Build decord from source (Git)
@@ -61,9 +62,7 @@ RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
     && rm -rf /tmp/decord
 
 # 3. Install the rest of the requirements
-# Pre-install torchcodec which is used by sam-audio for decoding
-RUN python3 -m pip install --no-cache-dir torchcodec \
-    && python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
