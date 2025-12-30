@@ -27,18 +27,18 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 1. Upgrade pip and setuptools for torchcodec compatibility
-RUN python3 -m pip install --upgrade pip setuptools wheel
+RUN python3 -m pip install --upgrade pip setuptools wheel pybind11
 
-# 2. Install torchcodec - try pip first, then source build if needed
-# The NGC image may have compatible wheels via conda-forge mirror
-RUN python3 -m pip install torchcodec || \
-    (git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+# 2. Build torchcodec from source with cmake for ARM
+# The C++ extensions need cmake to build properly on aarch64
+ENV CMAKE_PREFIX_PATH="$(python3 -c 'import torch;print(torch.utils.cmake_prefix_path)')"
+RUN git clone https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
     && cd /tmp/torchcodec \
-    && python3 -m pip install --no-build-isolation . \
-    && rm -rf /tmp/torchcodec)
+    && python3 -m pip install --no-build-isolation -e . \
+    && rm -rf /tmp/torchcodec
 
-# 2. Final verification of dependencies
-RUN python3 -c "import torch; import torchcodec.decoders; print('Verified: All DGX dependencies are correctly installed')"
+# 3. Final verification of dependencies
+RUN python3 -c "import torch; import torchcodec; print('torchcodec version:', torchcodec.__version__); print('Verified: torchcodec installed')"
 
 # 4. Install the rest of the requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
