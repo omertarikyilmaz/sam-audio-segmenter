@@ -55,7 +55,7 @@ def save_with_torchcodec(uri, src, sample_rate, channels_first=True, **kwargs):
 os.makedirs(os.path.join(torchcodec_dir, "encoders"), exist_ok=True)
 with open(os.path.join(torchcodec_dir, "encoders", "__init__.py"), "w") as f:
     f.write('''class AudioEncoder:
-    def __init__(self, uri, sample_rate, num_channels, format=None, encoder=None, encoder_format=None, compression_level=None):
+    def __init__(self, uri=None, sample_rate=16000, num_channels=1, format=None, encoder=None, encoder_format=None, compression_level=None, **kwargs):
         self.uri = uri
         self.sample_rate = sample_rate
         self.num_channels = num_channels
@@ -65,11 +65,16 @@ with open(os.path.join(torchcodec_dir, "encoders", "__init__.py"), "w") as f:
         self.compression_level = compression_level
 
     def write(self, audio_tensor):
-        # In a mock, we don't actually write, just simulate
         pass
 
     def close(self):
         pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 ''')
 
 os.makedirs(os.path.join(torchcodec_dir, "decoders"), exist_ok=True)
