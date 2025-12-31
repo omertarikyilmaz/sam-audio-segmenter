@@ -33,8 +33,9 @@ ENV PATH="/opt/mamba/envs/sam/bin:${PATH}"
 SHELL ["/bin/bash", "-c"]
 ENV CONDA_DEFAULT_ENV=sam
 
-# Install PyTorch nightly for aarch64 CUDA
-RUN pip install --pre torch torchaudio torchvision --index-url https://download.pytorch.org/whl/nightly/cu124
+# Install PyTorch with CUDA from conda-forge/pytorch channels (has aarch64 builds)
+RUN micromamba install -n sam -c pytorch -c nvidia -c conda-forge \
+    pytorch torchvision torchaudio pytorch-cuda=12.4 -y
 
 # Verify PyTorch installation
 RUN python -c "import torch; print('PyTorch:', torch.__version__, 'CUDA:', torch.cuda.is_available())"
