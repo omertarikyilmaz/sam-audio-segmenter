@@ -19,37 +19,57 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel
 
 # 4. THE ULTIMATE MOCK STEP: satisfy all imports without building problematic binaries
-# Using system python site-packages directly
 RUN SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
-    # xformers mock
+    echo "Creating mocks in: $SITE_PACKAGES" && \
+    # XFORMERS MOCK
     mkdir -p $SITE_PACKAGES/xformers/ops/fmha && \
-    echo 'print("NOTE: Mock xformers loaded")' > $SITE_PACKAGES/xformers/__init__.py && \
-    echo '__version__ = "0.0.0"' >> $SITE_PACKAGES/xformers/__init__.py && \
-    echo 'class AttentionBias: pass' > $SITE_PACKAGES/xformers/ops/__init__.py && \
-    echo 'class LowerTriangularMask(AttentionBias): pass' >> $SITE_PACKAGES/xformers/ops/__init__.py && \
-    echo 'def memory_efficient_attention(*args, **kwargs): return None' >> $SITE_PACKAGES/xformers/ops/__init__.py && \
-    echo 'from . import fmha' >> $SITE_PACKAGES/xformers/ops/__init__.py && \
-    echo 'class BlockDiagonalMask: pass' > $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
-    echo 'class AttentionBias: pass' >> $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
-    echo 'def memory_efficient_attention(*args, **kwargs): return None' >> $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
+    cat <<EOF > $SITE_PACKAGES/xformers/__init__.py
+print("NOTE: Mock xformers loaded to bypass binary incompatibility")
+__version__ = "0.0.0"
+EOF
+    cat <<EOF > $SITE_PACKAGES/xformers/ops/__init__.py
+class AttentionBias: pass
+class LowerTriangularMask(AttentionBias): pass
+def memory_efficient_attention(*args, **kwargs): return None
+from . import fmha
+EOF
+    cat <<EOF > $SITE_PACKAGES/xformers/ops/fmha/__init__.py
+class BlockDiagonalMask: pass
+class AttentionBias: pass
+def memory_efficient_attention(*args, **kwargs): return None
+EOF
+    # xformers dist-info
     mkdir -p $SITE_PACKAGES/xformers-0.0.0.dist-info && \
     echo -e "Metadata-Version: 2.1\nName: xformers\nVersion: 0.0.0" > $SITE_PACKAGES/xformers-0.0.0.dist-info/METADATA && \
-    # torchcodec mock
+    # TORCHCODEC MOCK
     mkdir -p $SITE_PACKAGES/torchcodec/decoders $SITE_PACKAGES/torchcodec/samplers && \
-    echo 'print("NOTE: Mock torchcodec loaded")' > $SITE_PACKAGES/torchcodec/__init__.py && \
-    echo '__version__ = "0.10.0"' >> $SITE_PACKAGES/torchcodec/__init__.py && \
-    echo 'class VideoDecoder: def __init__(self, *args, **kwargs): pass' > $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
-    echo 'class AudioDecoder: def __init__(self, *args, **kwargs): pass' >> $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
-    echo 'class ClipSampler: pass' > $SITE_PACKAGES/torchcodec/samplers/__init__.py && \
+    cat <<EOF > $SITE_PACKAGES/torchcodec/__init__.py
+print("NOTE: Mock torchcodec loaded to bypass binary incompatibility")
+__version__ = "0.10.0"
+EOF
+    cat <<EOF > $SITE_PACKAGES/torchcodec/decoders/__init__.py
+class VideoDecoder:
+    def __init__(self, *args, **kwargs): pass
+class AudioDecoder:
+    def __init__(self, *args, **kwargs): pass
+EOF
+    cat <<EOF > $SITE_PACKAGES/torchcodec/samplers/__init__.py
+class ClipSampler: pass
+EOF
+    # torchcodec dist-info
     mkdir -p $SITE_PACKAGES/torchcodec-0.10.0.dist-info && \
     echo -e "Metadata-Version: 2.1\nName: torchcodec\nVersion: 0.10.0" > $SITE_PACKAGES/torchcodec-0.10.0.dist-info/METADATA && \
     # decord mock
     mkdir -p $SITE_PACKAGES/decord && \
-    echo 'print("NOTE: Mock decord loaded")' > $SITE_PACKAGES/decord/__init__.py && \
-    echo 'class VideoReader: def __init__(self, *args, **kwargs): pass' >> $SITE_PACKAGES/decord/__init__.py && \
-    echo 'class AudioReader: def __init__(self, *args, **kwargs): pass' >> $SITE_PACKAGES/decord/__init__.py && \
-    echo 'def cpu(i=0): return 0' >> $SITE_PACKAGES/decord/__init__.py && \
-    echo 'def gpu(i=0): return 1' >> $SITE_PACKAGES/decord/__init__.py && \
+    cat <<EOF > $SITE_PACKAGES/decord/__init__.py
+print("NOTE: Mock decord loaded")
+class VideoReader:
+    def __init__(self, *args, **kwargs): pass
+class AudioReader:
+    def __init__(self, *args, **kwargs): pass
+def cpu(i=0): return 0
+def gpu(i=0): return 1
+EOF
     mkdir -p $SITE_PACKAGES/decord-0.6.0.dist-info && \
     echo -e "Metadata-Version: 2.1\nName: decord\nVersion: 0.6.0" > $SITE_PACKAGES/decord-0.6.0.dist-info/METADATA
 
