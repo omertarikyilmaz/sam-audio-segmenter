@@ -23,13 +23,12 @@ ENV CONDA_DEFAULT_ENV=sam_audio
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-# 2. CORE MOCKING STEP - This solves the binary incompatibility once and for all
-# We create the structure expected by SAM-Audio exactly as in the script you shared
+# 2. CORE MOCKING STEP - Exact implementation of user's script
 RUN SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])") && \
     echo "Creating mocks in: $SITE_PACKAGES" && \
     # XFORMERS MOCK
     mkdir -p $SITE_PACKAGES/xformers/ops/fmha && \
-    echo 'print("NOTE: Mock xformers loaded")' > $SITE_PACKAGES/xformers/__init__.py && \
+    echo 'print("NOTE: Mock xformers loaded to bypass binary incompatibility")' > $SITE_PACKAGES/xformers/__init__.py && \
     echo '__version__ = "0.0.0"' >> $SITE_PACKAGES/xformers/__init__.py && \
     echo 'class AttentionBias: pass' > $SITE_PACKAGES/xformers/ops/__init__.py && \
     echo 'class LowerTriangularMask(AttentionBias): pass' >> $SITE_PACKAGES/xformers/ops/__init__.py && \
@@ -38,13 +37,19 @@ RUN SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])") &
     echo 'class BlockDiagonalMask: pass' > $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
     echo 'class AttentionBias: pass' >> $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
     echo 'def memory_efficient_attention(*args, **kwargs): return None' >> $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
+    # xformers dist-info
+    mkdir -p $SITE_PACKAGES/xformers-0.0.0.dist-info && \
+    echo -e "Metadata-Version: 2.1\nName: xformers\nVersion: 0.0.0" > $SITE_PACKAGES/xformers-0.0.0.dist-info/METADATA && \
     # TORCHCODEC MOCK
     mkdir -p $SITE_PACKAGES/torchcodec/decoders $SITE_PACKAGES/torchcodec/samplers && \
-    echo 'print("NOTE: Mock torchcodec loaded")' > $SITE_PACKAGES/torchcodec/__init__.py && \
+    echo 'print("NOTE: Mock torchcodec loaded to bypass binary incompatibility")' > $SITE_PACKAGES/torchcodec/__init__.py && \
     echo '__version__ = "0.10.0"' >> $SITE_PACKAGES/torchcodec/__init__.py && \
     echo 'class VideoDecoder: def __init__(self, *args, **kwargs): pass' > $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
     echo 'class AudioDecoder: def __init__(self, *args, **kwargs): pass' >> $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
-    echo 'class ClipSampler: pass' > $SITE_PACKAGES/torchcodec/samplers/__init__.py
+    echo 'class ClipSampler: pass' > $SITE_PACKAGES/torchcodec/samplers/__init__.py && \
+    # torchcodec dist-info
+    mkdir -p $SITE_PACKAGES/torchcodec-0.10.0.dist-info && \
+    echo -e "Metadata-Version: 2.1\nName: torchcodec\nVersion: 0.10.0" > $SITE_PACKAGES/torchcodec-0.10.0.dist-info/METADATA
 
 # 3. Install core dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
