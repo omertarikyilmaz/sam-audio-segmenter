@@ -34,8 +34,8 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
-# Upgrade pip and install build tools
-RUN python3.11 -m pip install --upgrade pip setuptools wheel pybind11 numpy
+# Upgrade pip and install build tools (including cmake for decord build)
+RUN python3.11 -m pip install --upgrade pip setuptools wheel pybind11 numpy cmake
 
 # Create working directory
 WORKDIR /app
