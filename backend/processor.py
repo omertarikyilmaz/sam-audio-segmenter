@@ -412,9 +412,10 @@ class SAMAudioProcessor:
         residual_path = output_dir / "residual.wav"
         cleaned_path = None
         
-        torchaudio.save(str(original_path), original_waveform, sr)
-        torchaudio.save(str(target_path), merged_target.unsqueeze(0), sr)
-        torchaudio.save(str(residual_path), merged_residual.unsqueeze(0), sr)
+        # Use soundfile instead of torchaudio.save to bypass torchcodec dependency
+        sf.write(str(original_path), original_waveform.squeeze().numpy(), sr)
+        sf.write(str(target_path), merged_target.numpy(), sr)
+        sf.write(str(residual_path), merged_residual.numpy(), sr)
         
         # Step 6: Remove silence from isolated (human voices) if requested
         if remove_silence:
