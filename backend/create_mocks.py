@@ -45,10 +45,32 @@ with open(os.path.join(torchcodec_dir, "__init__.py"), "w") as f:
 
 os.makedirs(os.path.join(torchcodec_dir, "decoders"), exist_ok=True)
 with open(os.path.join(torchcodec_dir, "decoders", "__init__.py"), "w") as f:
-    f.write('class VideoDecoder:\n')
-    f.write('    def __init__(self, *args, **kwargs): pass\n')
-    f.write('class AudioDecoder:\n')
-    f.write('    def __init__(self, *args, **kwargs): pass\n')
+    f.write('''class VideoDecoderMetadata:
+    def __init__(self):
+        self.num_frames = 0
+        self.duration_seconds = 0.0
+        self.width = 0
+        self.height = 0
+
+class AudioDecoderMetadata:
+    def __init__(self):
+        self.sample_rate = 16000
+        self.num_channels = 1
+        self.num_frames = 0
+        self.duration_seconds = 0.0
+
+class VideoDecoder:
+    def __init__(self, *args, **kwargs):
+        self.metadata = VideoDecoderMetadata()
+    def __len__(self): return 0
+    def __getitem__(self, idx): return None
+
+class AudioDecoder:
+    def __init__(self, *args, **kwargs):
+        self.metadata = AudioDecoderMetadata()
+    def __len__(self): return 0
+    def __getitem__(self, idx): return None
+''')
 
 os.makedirs(os.path.join(torchcodec_dir, "samplers"), exist_ok=True)
 with open(os.path.join(torchcodec_dir, "samplers", "__init__.py"), "w") as f:
