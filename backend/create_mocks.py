@@ -40,9 +40,37 @@ torchcodec_dir = os.path.join(packages_dir, "torchcodec")
 os.makedirs(torchcodec_dir, exist_ok=True)
 
 with open(os.path.join(torchcodec_dir, "__init__.py"), "w") as f:
-    f.write('print("NOTE: Mock torchcodec loaded to bypass binary incompatibility")\n')
-    f.write('__version__ = "0.10.0"\n')
-    f.write('from .decoders import AudioDecoder, VideoDecoder\n')
+    f.write('''print("NOTE: Mock torchcodec loaded to bypass binary incompatibility")
+__version__ = "0.10.0"
+from .decoders import AudioDecoder, VideoDecoder
+from .encoders import AudioEncoder
+
+def save_with_torchcodec(uri, src, sample_rate, channels_first=True, **kwargs):
+    """Mock save_with_torchcodec - does nothing, use torchaudio.save directly"""
+    import torchaudio
+    # Fall back to regular torchaudio save with sox or soundfile backend
+    torchaudio.save(uri, src, sample_rate, format="wav")
+''')
+
+os.makedirs(os.path.join(torchcodec_dir, "encoders"), exist_ok=True)
+with open(os.path.join(torchcodec_dir, "encoders", "__init__.py"), "w") as f:
+    f.write('''class AudioEncoder:
+    def __init__(self, uri, sample_rate, num_channels, format=None, encoder=None, encoder_format=None, compression_level=None):
+        self.uri = uri
+        self.sample_rate = sample_rate
+        self.num_channels = num_channels
+        self.format = format
+        self.encoder = encoder
+        self.encoder_format = encoder_format
+        self.compression_level = compression_level
+
+    def write(self, audio_tensor):
+        # In a mock, we don't actually write, just simulate
+        pass
+
+    def close(self):
+        pass
+''')
 
 os.makedirs(os.path.join(torchcodec_dir, "decoders"), exist_ok=True)
 with open(os.path.join(torchcodec_dir, "decoders", "__init__.py"), "w") as f:
