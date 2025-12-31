@@ -57,14 +57,7 @@ RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
 # Verify decord installation
 RUN python3.11 -c "import decord; print('decord installed successfully')"
 
-# Build torchcodec v0.1.0 from source
-ENV I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION=1
-RUN git clone --branch v0.1.0 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
-    && cd /tmp/torchcodec \
-    && python3.11 -m pip install --no-build-isolation . \
-    && rm -rf /tmp/torchcodec
-
-# Install PyTorch ecosystem for Python 3.11 (compatible with CUDA from base image)
+# Install PyTorch ecosystem for Python 3.11 FIRST (torchcodec depends on it)
 RUN python3.11 -m pip install --no-cache-dir \
     torch==2.5.0 \
     torchaudio==2.5.0 \
@@ -73,6 +66,13 @@ RUN python3.11 -m pip install --no-cache-dir \
 
 # Verify PyTorch CUDA
 RUN python3.11 -c "import torch; print('PyTorch:', torch.__version__, 'CUDA:', torch.cuda.is_available())"
+
+# Build torchcodec v0.1.0 from source (AFTER PyTorch is installed)
+ENV I_CONFIRM_THIS_IS_NOT_A_LICENSE_VIOLATION=1
+RUN git clone --branch v0.1.0 --depth 1 https://github.com/pytorch/torchcodec.git /tmp/torchcodec \
+    && cd /tmp/torchcodec \
+    && python3.11 -m pip install --no-build-isolation . \
+    && rm -rf /tmp/torchcodec
 
 # Install sam-audio and API requirements
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
