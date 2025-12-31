@@ -1,28 +1,26 @@
-# SAM-Audio Pipeline - NVIDIA DGX ARM64
-# TOTAL MOCK STRATEGY: Bypass all problematic aarch64 binary builds
-FROM nvcr.io/nvidia/pytorch:24.08-py3
+# SAM-Audio Pipeline - NVIDIA DGX Blackwell (GB10) Optimized
+# Using 24.12 for Blackwell support and native Python 3.12
+FROM nvcr.io/nvidia/pytorch:24.12-py3
 
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 1. Install system dependencies (Minimal)
+# 1. Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl git wget build-essential libsndfile1 libgl1 libglib2.0-0 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Setup Python 3.11 environment via micromamba
-RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-aarch64/latest | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
-ENV MAMBA_ROOT_PREFIX=/opt/mamba
-RUN micromamba create -n sam_audio python=3.11 -c conda-forge "ffmpeg<8" -y
-ENV PATH="/opt/mamba/envs/sam_audio/bin:${PATH}"
-SHELL ["/bin/bash", "-c"]
+# 2. Python 3.12 is ALREADY the system default in 24.12-py3
+# No need for Micromamba/Conda - staying in system Python for stability
 
-# 3. Install PyTorch (Official aarch64 wheels)
+# 3. MOUNT CACHE PILL - BuildKit cache for remaining pip installs
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+    pip install --upgrade pip setuptools wheel
 
-# 4. THE ULTIMATE MOCK STEP: satisfy all imports without building anything
-RUN SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])") && \
+# 4. THE ULTIMATE MOCK STEP: satisfy all imports without building problematic binaries
+# Using system python site-packages directly
+RUN SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
     # xformers mock
     mkdir -p $SITE_PACKAGES/xformers/ops/fmha && \
     echo 'print("NOTE: Mock xformers loaded")' > $SITE_PACKAGES/xformers/__init__.py && \
@@ -55,7 +53,7 @@ RUN SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])") &
     mkdir -p $SITE_PACKAGES/decord-0.6.0.dist-info && \
     echo -e "Metadata-Version: 2.1\nName: decord\nVersion: 0.6.0" > $SITE_PACKAGES/decord-0.6.0.dist-info/METADATA
 
-# 5. Install dependencies into the environment
+# 5. Install SAM-Audio dependencies (pip will use system torch in 24.12)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install "numpy>=1.24.0,<2.0" protobuf==3.20.3 scipy scikit-learn "transformers>=4.54.0" einops pydub torchdiffeq safetensors && \
     pip install git+https://github.com/facebookresearch/dacvae.git \
@@ -69,4 +67,6 @@ WORKDIR /app
 COPY . .
 RUN mkdir -p /tmp/sam-audio/uploads /tmp/sam-audio/results
 EXPOSE 8011
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8011"]
+
+# In 24.12, system python is python3.12
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8011"]
