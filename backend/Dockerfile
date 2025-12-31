@@ -1,10 +1,13 @@
 # SAM-Audio Pipeline - NVIDIA DGX ARM64 Optimized
-# Strategy: Build decord from source FIRST, then install perception-models
+# All dependencies properly ordered with environment variables set
 FROM nvcr.io/nvidia/pytorch:24.08-py3
 
-# Set environment variables
+# Set environment variables including CUDA paths
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="${CUDA_HOME}/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -38,8 +41,7 @@ RUN git clone --branch v0.1.0 --depth 1 https://github.com/pytorch/torchcodec.gi
     && python3 -m pip install --no-build-isolation . \
     && rm -rf /tmp/torchcodec
 
-# BUILD DECORD FROM SOURCE FIRST - No ARM64 wheels exist!
-# This must be done BEFORE perception-models which depends on it
+# BUILD DECORD FROM SOURCE - No ARM64 wheels exist
 RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
     && cd /tmp/decord \
     && mkdir build && cd build \
@@ -52,7 +54,12 @@ RUN git clone --recursive https://github.com/dmlc/decord.git /tmp/decord \
 # Verify decord installation
 RUN python3 -c "import decord; print('decord installed successfully')"
 
-# Now install perception-models (decord is already available)
+# Install xformers from source (no ARM64 wheels available)
+# CUDA_HOME is set, numpy needed for build
+RUN python3 -m pip install --no-cache-dir numpy \
+    && python3 -m pip install --no-cache-dir --no-build-isolation xformers
+
+# Install perception-models (decord and xformers already available)
 RUN python3 -m pip install --no-cache-dir --ignore-requires-python \
     "perception-models @ git+https://github.com/facebookresearch/perception_models@unpin-deps"
 
