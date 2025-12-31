@@ -38,13 +38,10 @@ RUN git clone --branch v0.1.0 --depth 1 https://github.com/pytorch/torchcodec.gi
 # Verify base image Python and PyTorch
 RUN python3 -c "import torch; print('Python:', __import__('sys').version); print('PyTorch:', torch.__version__, 'CUDA:', torch.cuda.is_available())"
 
-# Clone and patch perception-models to allow Python 3.10
-# The unpin-deps branch requires >=3.11, but the code actually works with 3.10
-RUN git clone -b unpin-deps https://github.com/facebookresearch/perception_models.git /tmp/perception_models \
-    && cd /tmp/perception_models \
-    && sed -i 's/requires-python = ">=3.11"/requires-python = ">=3.10"/' pyproject.toml \
-    && python3 -m pip install --no-cache-dir . \
-    && rm -rf /tmp/perception_models
+# Install perception-models with --ignore-requires-python to bypass Python 3.11 requirement
+# The code works fine with Python 3.10, only the metadata requires 3.11
+RUN python3 -m pip install --no-cache-dir --ignore-requires-python \
+    "perception-models @ git+https://github.com/facebookresearch/perception_models@unpin-deps"
 
 # Build decord from source for Python 3.10 (no ARM64 wheels)
 RUN python3 -m pip install cmake \
