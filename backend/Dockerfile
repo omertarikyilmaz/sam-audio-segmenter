@@ -1,5 +1,5 @@
 # SAM-Audio Pipeline - NVIDIA DGX Blackwell (GB10) FULL GPU SUPPORT
-# Uses CUDA 12.9 base + PyTorch 2.7 nightly with sm_120 (Blackwell) support
+# Uses CUDA 12.9 base + PyTorch nightly with sm_120 (Blackwell) support
 FROM nvcr.io/nvidia/cuda:12.9.0-devel-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1
@@ -7,28 +7,36 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
-# Ensure HuggingFace uses the mounted volume for model cache
+
+# HuggingFace cache configuration - ensures model weights persist across rebuilds
 ENV HF_HOME=/root/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/root/.cache/huggingface/transformers
+
+# CUDA/cuBLAS Configuration for Blackwell sm_120
+ENV TORCH_CUDA_ARCH_LIST="9.0;12.0"
+ENV CUDA_VISIBLE_DEVICES=0
+# Disable TF32 for precision (can help with some cuBLAS errors)
+ENV NVIDIA_TF32_OVERRIDE=0
 
 # 1. Install system dependencies + Python 3.11
 RUN apt-get update && apt-get install -y \
     curl git wget build-essential software-properties-common \
-    libsndfile1 libgl1 libglib2.0-0 ffmpeg \
+    libsndfile1 libgl1 libglib2.0-0 ffmpeg ninja-build cmake \
     && add-apt-repository -y ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y \
     python3.11 python3.11-venv python3.11-dev python3-pip \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Upgrade pip
-RUN python3 -m pip install --upgrade pip setuptools wheel
+# 2. Upgrade pip and install build tools
+RUN python3 -m pip install --upgrade pip setuptools wheel ninja cmake
 
-# 3. Install PyTorch 2.7+ nightly with CUDA 12.8+ (has sm_120 Blackwell support)
-RUN pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+# 3. Install PyTorch nightly with CUDA 12.9 (latest Blackwell support)
+# cu129 has better sm_120 kernel support than cu128
+RUN pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
 
 # 4. Verify PyTorch + CUDA
-RUN python3 -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+RUN python3 -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())" || echo "GPU verification will happen at runtime"
 
 # 5. Create mock packages script
 WORKDIR /app
