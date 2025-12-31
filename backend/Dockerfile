@@ -33,16 +33,16 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 # 3. Install PyTorch nightly cu129 (Blackwell sm_120 support)
 RUN pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
 
-# 4. Create MINIMAL mocks for import compatibility only
-# Actual audio I/O uses soundfile in processor.py
+# 4. Create ROBUST mocks for import compatibility and avoidance of "takes no arguments" errors
+# Actual audio I/O uses soundfile/torchaudio in processor.py
 RUN SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
     mkdir -p $SITE_PACKAGES/torchcodec/decoders $SITE_PACKAGES/torchcodec/encoders && \
-    echo 'class AudioDecoder: pass' > $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
-    echo 'class VideoDecoder: pass' >> $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
-    echo 'class AudioEncoder: pass' > $SITE_PACKAGES/torchcodec/encoders/__init__.py && \
-    echo '__version__="0.0.0"; from .decoders import *; from .encoders import *' > $SITE_PACKAGES/torchcodec/__init__.py && \
-    mkdir -p $SITE_PACKAGES/torchcodec-0.0.0.dist-info && \
-    echo "Name: torchcodec\nVersion: 0.0.0" > $SITE_PACKAGES/torchcodec-0.0.0.dist-info/METADATA && \
+    echo 'class AudioDecoder: \n    def __init__(self, *args, **kwargs): pass\n    def __len__(self): return 0\n    def __getitem__(self, idx): return None' > $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
+    echo 'class VideoDecoder: \n    def __init__(self, *args, **kwargs): pass' >> $SITE_PACKAGES/torchcodec/decoders/__init__.py && \
+    echo 'class AudioEncoder: \n    def __init__(self, *args, **kwargs): pass\n    def __enter__(self): return self\n    def __exit__(self, *args): pass' > $SITE_PACKAGES/torchcodec/encoders/__init__.py && \
+    echo '__version__="0.10.0"; from .decoders import *; from .encoders import *' > $SITE_PACKAGES/torchcodec/__init__.py && \
+    mkdir -p $SITE_PACKAGES/torchcodec-0.10.0.dist-info && \
+    echo "Name: torchcodec\nVersion: 0.10.0" > $SITE_PACKAGES/torchcodec-0.10.0.dist-info/METADATA && \
     mkdir -p $SITE_PACKAGES/xformers/ops/fmha && \
     echo 'class AttentionBias: pass' > $SITE_PACKAGES/xformers/ops/__init__.py && \
     echo 'class BlockDiagonalMask: pass' > $SITE_PACKAGES/xformers/ops/fmha/__init__.py && \
@@ -50,9 +50,9 @@ RUN SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") 
     mkdir -p $SITE_PACKAGES/xformers-0.0.0.dist-info && \
     echo "Name: xformers\nVersion: 0.0.0" > $SITE_PACKAGES/xformers-0.0.0.dist-info/METADATA && \
     mkdir -p $SITE_PACKAGES/decord && \
-    echo 'class VideoReader: pass\nclass AudioReader: pass\ndef cpu(i=0): return 0\ndef gpu(i=0): return 1' > $SITE_PACKAGES/decord/__init__.py && \
-    mkdir -p $SITE_PACKAGES/decord-0.0.0.dist-info && \
-    echo "Name: decord\nVersion: 0.0.0" > $SITE_PACKAGES/decord-0.0.0.dist-info/METADATA
+    echo 'class VideoReader: \n    def __init__(self, *args, **kwargs): pass\nclass AudioReader: \n    def __init__(self, *args, **kwargs): pass\ndef cpu(i=0): return 0\ndef gpu(i=0): return 1' > $SITE_PACKAGES/decord/__init__.py && \
+    mkdir -p $SITE_PACKAGES/decord-0.6.0.dist-info && \
+    echo "Name: decord\nVersion: 0.6.0" > $SITE_PACKAGES/decord-0.6.0.dist-info/METADATA
 
 WORKDIR /app
 

@@ -265,9 +265,22 @@ class SAMAudioProcessor:
         
         logger.info(f"Processing chunk: {chunk_path.name} with prompt: '{prompt}'")
         
-        # Process with SAM-Audio
+        # Load audio explicitly to bypass SAM-Audio's internal file loader (which relies on torchcodec)
+        # We use torchaudio (backed by soundfile/sox) to load the WAV file into a tensor
+        waveform, sr = torchaudio.load(str(chunk_path))
+        
+        # Resample if needed
+        target_sr = self.processor.audio_sampling_rate
+        if sr != target_sr:
+            waveform = torchaudio.functional.resample(waveform, sr, target_sr)
+
+        # SAM-Audio expects (channels, time). If stereo, mix to mono if model expects mono?
+        # Model usually handles mono/stereo, but let's keep it as loaded.
+        
+        # Process with SAM-Audio using the tensor
         inputs = self.processor(
-            audios=[str(chunk_path)], 
+            audios=[waveform], 
+            sampling_rate=target_sr,
             descriptions=[prompt]
         ).to(self.device)
         
