@@ -23,15 +23,15 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda for Python 3.11 environment
-RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O /tmp/miniconda.sh \
-    && bash /tmp/miniconda.sh -b -p /opt/conda \
-    && rm /tmp/miniconda.sh
-ENV PATH="/opt/conda/bin:${PATH}"
+# Install micromamba (faster than conda, no TOS issues)
+RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-aarch64/latest | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
+ENV MAMBA_ROOT_PREFIX=/opt/mamba
+RUN micromamba create -n sam python=3.11 -c conda-forge -y
+ENV PATH="/opt/mamba/envs/sam/bin:${PATH}"
 
-# Create Python 3.11 environment
-RUN conda create -n sam python=3.11 -y
-SHELL ["conda", "run", "-n", "sam", "/bin/bash", "-c"]
+# Activate sam environment for all subsequent commands
+SHELL ["/bin/bash", "-c"]
+ENV CONDA_DEFAULT_ENV=sam
 
 # Install PyTorch nightly for aarch64 CUDA
 RUN pip install --pre torch torchaudio torchvision --index-url https://download.pytorch.org/whl/nightly/cu124
@@ -95,5 +95,5 @@ EXPOSE 8011
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8011/health || exit 1
 
-# Run the application with conda environment
-CMD ["conda", "run", "--no-capture-output", "-n", "sam", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8011"]
+# Run the application (PATH already includes sam env)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8011"]
