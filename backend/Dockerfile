@@ -1,7 +1,7 @@
 # SAM-Audio Pipeline - Official NVIDIA DGX Image (ARM/aarch64 Optimized)
-# Using 24.08-py3 (PyTorch 2.5) for torchcodec compatibility
-# Note: 24.12-py3 has PyTorch 2.6.0a0 (alpha) which has C++ template incompatibilities with torchcodec
-FROM nvcr.io/nvidia/pytorch:24.08-py3
+# Using 24.11-py3 which has Python 3.12 (required for perception-models >=3.11)
+# Note: 24.08-py3 has Python 3.10 which is incompatible with perception-models
+FROM nvcr.io/nvidia/pytorch:24.11-py3
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
